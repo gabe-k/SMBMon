@@ -31,8 +31,9 @@ namespace SMBMon
     public enum FilterOperand
     {
         Equals,
+        NotEquals,
         Contains,
-        DoesNotContain,
+        NotContains,
         StartsWith,
         EndsWith,
         And,
@@ -57,10 +58,13 @@ namespace SMBMon
                 case FilterOperand.Equals:
                     result = (val == valueString);
                     break;
+                case FilterOperand.NotEquals:
+                    result = (val != valueString);
+                    break;
                 case FilterOperand.Contains:
                     result = val.Contains(valueString);
                     break;
-                case FilterOperand.DoesNotContain:
+                case FilterOperand.NotContains:
                     result = !val.Contains(valueString);
                     break;
                 case FilterOperand.StartsWith:
@@ -84,6 +88,9 @@ namespace SMBMon
             {
                 case FilterOperand.Equals:
                     result = (val == valueInt);
+                    break;
+                case FilterOperand.NotEquals:
+                    result = (val != valueInt);
                     break;
                 case FilterOperand.And:
                     result = ((val & valueInt) != 0);

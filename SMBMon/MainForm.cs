@@ -59,7 +59,9 @@ namespace SMBMon
 
         private void addFilterButton_Click(object sender, EventArgs e)
         {
-            SMBFilterClause clause = new SMBFilterClause(FilterField.Path, FilterOperand.Contains, "idk.txt");
+            FilterEditor filterEditor = new FilterEditor();
+            filterEditor.Show();
+            SMBFilterClause clause = new SMBFilterClause(FilterField.Path, FilterOperand.True, "idk.txt");
             SMBFilter filter = new SMBFilter(NTFileOperation.Any, FilterAction.Log);
             filter.AddClause(clause);
             Program.FilteredFileSystem.AddFilter(filter);
