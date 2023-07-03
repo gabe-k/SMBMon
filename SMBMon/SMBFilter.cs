@@ -98,7 +98,7 @@ namespace SMBMon
             return result;
         }
 
-        public bool Evaluate(ref NTFilteredFileSystem.CreateFileParams createFileParams)
+        public bool Evaluate(NTFilteredFileSystem.CreateFileInfo createFileParams)
         {
             bool result = false;
 
@@ -131,7 +131,7 @@ namespace SMBMon
             return result;
         }
 
-        public bool Evaluate(ref NTFilteredFileSystem.CloseFileParams closeFileParams)
+        public bool Evaluate(NTFilteredFileSystem.CloseFileInfo closeFileParams)
         {
             bool result = false;
 
@@ -152,7 +152,7 @@ namespace SMBMon
             return result;
         }
 
-        public bool Evaluate(ref NTFilteredFileSystem.ReadFileParams readFileParams)
+        public bool Evaluate(NTFilteredFileSystem.ReadFileInfo readFileParams)
         {
             bool result = false;
 
@@ -179,7 +179,7 @@ namespace SMBMon
             return result;
         }
 
-        public bool Evaluate(ref NTFilteredFileSystem.WriteFileParams writeFileParams)
+        public bool Evaluate(NTFilteredFileSystem.WriteFileInfo writeFileParams)
         {
             bool result = false;
 
@@ -198,6 +198,27 @@ namespace SMBMon
                     break;
                 case FilterField.Length:
                     result = EvaluateInt((ulong)writeFileParams.Length);
+                    break;
+                default:
+                    break;
+            }
+
+            return result;
+        }
+
+        public bool Evaluate(NTFilteredFileSystem.FlushFileBuffersInfo flushFileBuffersParams)
+        {
+            bool result = false;
+
+            if (operand == FilterOperand.True)
+            {
+                return true;
+            }
+
+            switch (field)
+            {
+                case FilterField.Path:
+                    result = EvaluateString(flushFileBuffersParams.Path);
                     break;
                 default:
                     break;
@@ -227,57 +248,41 @@ namespace SMBMon
         public NTFileOperation Operation;
         public FilterAction Action;
 
-        public bool Match(ref NTFilteredFileSystem.CreateFileParams createFileParams)
+        public bool Match(ICallInfo callInfo)
         {
             bool result = false;
 
             foreach (SMBFilterClause clause in Clauses)
             {
-                result |= clause.Evaluate(ref createFileParams);
+                switch (callInfo.Operation())
+                {
+                    case NTFileOperation.CreateFile:
+                        result |= clause.Evaluate((NTFilteredFileSystem.CreateFileInfo)callInfo);
+                        break;
+                    case NTFileOperation.CloseFile:
+                        result |= clause.Evaluate((NTFilteredFileSystem.CloseFileInfo)callInfo);
+                        break;
+                    case NTFileOperation.ReadFile:
+                        result |= clause.Evaluate((NTFilteredFileSystem.ReadFileInfo)callInfo);
+                        break;
+                    case NTFileOperation.WriteFile:
+                        result |= clause.Evaluate((NTFilteredFileSystem.WriteFileInfo)callInfo);
+                        break;
+                    case NTFileOperation.FlushFileBuffers:
+                        result |= clause.Evaluate((NTFilteredFileSystem.FlushFileBuffersInfo)callInfo);
+                        break;
+                    default:
+                        break;
+                }
             }
 
             return result;
         }
 
-        public bool Match(ref NTFilteredFileSystem.CloseFileParams closeFileParams)
+        public void Apply(ICallInfo callInfo)
         {
-            bool result = false;
 
-            foreach (SMBFilterClause clause in Clauses)
-            {
-                result |= clause.Evaluate(ref closeFileParams);
-            }
-
-            return result;
-        }
-
-        public bool Match(ref NTFilteredFileSystem.ReadFileParams readFileParams)
-        {
-            bool result = false;
-
-            foreach (SMBFilterClause clause in Clauses)
-            {
-                result |= clause.Evaluate(ref readFileParams);
-            }
-
-            return result;
-        }
-
-        public bool Match(ref NTFilteredFileSystem.WriteFileParams writeFileParams)
-        {
-            bool result = false;
-
-            foreach (SMBFilterClause clause in Clauses)
-            {
-                result |= clause.Evaluate(ref writeFileParams);
-            }
-
-            return result;
-        }
-
-        public void Apply(ref NTFilteredFileSystem.CreateFileParams createFileParams)
-        {
-            if (!Match(ref createFileParams))
+            if (!Match(callInfo))
             {
                 return;
             }
@@ -285,58 +290,7 @@ namespace SMBMon
             switch (Action)
             {
                 case FilterAction.Log:
-                    createFileParams.Log = true;
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        public void Apply(ref NTFilteredFileSystem.CloseFileParams closeFileParams)
-        {
-            if (!Match(ref closeFileParams))
-            {
-                return;
-            }
-
-            switch (Action)
-            {
-                case FilterAction.Log:
-                    closeFileParams.Log = true;
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        public void Apply(ref NTFilteredFileSystem.ReadFileParams readFileParams)
-        {
-            if (!Match(ref readFileParams))
-            {
-                return;
-            }
-
-            switch (Action)
-            {
-                case FilterAction.Log:
-                    readFileParams.Log = true;
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        public void Apply(ref NTFilteredFileSystem.WriteFileParams writeFileParams)
-        {
-            if (!Match(ref writeFileParams))
-            {
-                return;
-            }
-
-            switch (Action)
-            {
-                case FilterAction.Log:
-                    writeFileParams.Log = true;
+                    callInfo.Log = true;
                     break;
                 default:
                     break;

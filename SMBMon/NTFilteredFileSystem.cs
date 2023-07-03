@@ -13,6 +13,12 @@ using System.Threading;
 
 namespace SMBMon
 {
+    public interface ICallInfo
+    {
+        NTFileOperation Operation();
+        bool Log { get; set; }
+    }
+
     internal class PendingRequest
     {
         public IntPtr FileHandle;
@@ -115,7 +121,7 @@ namespace SMBMon
             return objectAttributes;
         }
 
-        public struct CreateFileParams
+        public class CreateFileInfo : ICallInfo
         {
             public string Path;
             public AccessMask DesiredAccess;
@@ -123,18 +129,24 @@ namespace SMBMon
             public ShareAccess ShareAccess;
             public CreateDisposition CreateDisposition;
             public CreateOptions CreateOptions;
-            public bool Log;
+
+            public bool Log { get; set; }
+
+            NTFileOperation ICallInfo.Operation()
+            {
+                return NTFileOperation.CreateFile;
+            }
         }
         private NTStatus CreateFile(out IntPtr handle, out FileStatus fileStatus, string nativePath, AccessMask desiredAccess, long allocationSize, SMBLibrary.FileAttributes fileAttributes, ShareAccess shareAccess, CreateDisposition createDisposition, CreateOptions createOptions)
         {
             //bool writeLog = false;
-            CreateFileParams curParams = new CreateFileParams() { Path = nativePath, DesiredAccess = desiredAccess, FileAttributes = fileAttributes, ShareAccess = shareAccess, CreateDisposition = createDisposition, CreateOptions = createOptions };
+            CreateFileInfo curParams = new CreateFileInfo() { Path = nativePath, DesiredAccess = desiredAccess, FileAttributes = fileAttributes, ShareAccess = shareAccess, CreateDisposition = createDisposition, CreateOptions = createOptions };
             // apply filters
             foreach (SMBFilter filter in m_filters)
             {
                 if (filter.Operation == NTFileOperation.CreateFile || filter.Operation == NTFileOperation.Any)
                 {
-                    filter.Apply(ref curParams);
+                    filter.Apply(curParams);
                 }
             }
 
@@ -195,10 +207,16 @@ namespace SMBMon
             return status;
         }
 
-        public struct CloseFileParams
+        public class CloseFileInfo : ICallInfo
         {
             public string Path;
-            public bool Log;
+
+            public bool Log { get; set; }
+
+            NTFileOperation ICallInfo.Operation()
+            {
+                return NTFileOperation.CloseFile;
+            }
         }
         public NTStatus CloseFile(object handle)
         {
@@ -213,12 +231,12 @@ namespace SMBMon
                 Cancel(request);
             }
 
-            CloseFileParams curParams = new CloseFileParams() { Path = m_handlePathDict[(IntPtr)handle], Log = false };
+            CloseFileInfo curParams = new CloseFileInfo() { Path = m_handlePathDict[(IntPtr)handle], Log = false };
             foreach (SMBFilter filter in m_filters)
             {
                 if (filter.Operation == NTFileOperation.CloseFile || filter.Operation == NTFileOperation.Any)
                 {
-                    filter.Apply(ref curParams);
+                    filter.Apply(curParams);
                 }
             }
             NTStatus status = NtClose((IntPtr)handle);
@@ -239,23 +257,29 @@ namespace SMBMon
             return status;
         }
 
-        public struct ReadFileParams
+        public class ReadFileInfo : ICallInfo
         {
             public string Path;
             public long Offset;
             public int Length;
-            public bool Log;
+
+            public bool Log { get; set; }
+
+            NTFileOperation ICallInfo.Operation()
+            {
+                return NTFileOperation.ReadFile;
+            }
         }
         public NTStatus ReadFile(out byte[] data, object handle, long offset, int maxCount)
         {
             IO_STATUS_BLOCK ioStatusBlock;
 
-            ReadFileParams curParams = new ReadFileParams() { Path = m_handlePathDict[(IntPtr)handle], Offset = offset, Length = maxCount, Log = false };
+            ReadFileInfo curParams = new ReadFileInfo() { Path = m_handlePathDict[(IntPtr)handle], Offset = offset, Length = maxCount, Log = false };
             foreach (SMBFilter filter in m_filters)
             {
                 if (filter.Operation == NTFileOperation.ReadFile || filter.Operation == NTFileOperation.Any)
                 {
-                    filter.Apply(ref curParams);
+                    filter.Apply(curParams);
                 }
             }
 
@@ -286,21 +310,26 @@ namespace SMBMon
             return status;
         }
 
-        public struct WriteFileParams
+        public class WriteFileInfo : ICallInfo
         {
             public string Path;
             public long Offset;
             public int Length;
-            public bool Log;
+            public bool Log { get; set; }
+
+            NTFileOperation ICallInfo.Operation()
+            {
+                return NTFileOperation.WriteFile;
+            }
         }
         public NTStatus WriteFile(out int numberOfBytesWritten, object handle, long offset, byte[] data)
         {
-            WriteFileParams curParams = new WriteFileParams() { Path = m_handlePathDict[(IntPtr)handle], Offset = offset, Length = data.Length, Log = false };
+            WriteFileInfo curParams = new WriteFileInfo() { Path = m_handlePathDict[(IntPtr)handle], Offset = offset, Length = data.Length, Log = false };
             foreach (SMBFilter filter in m_filters)
             {
                 if (filter.Operation == NTFileOperation.WriteFile || filter.Operation == NTFileOperation.Any)
                 {
-                    filter.Apply(ref curParams);
+                    filter.Apply(curParams);
                 }
             }
 
@@ -333,10 +362,44 @@ namespace SMBMon
             return status;
         }
 
+        public class FlushFileBuffersInfo : ICallInfo
+        {
+            public string Path;
+            public bool Log { get; set; }
+
+            NTFileOperation ICallInfo.Operation()
+            {
+                return NTFileOperation.FlushFileBuffers;
+            }
+        }
         public NTStatus FlushFileBuffers(object handle)
         {
+            FlushFileBuffersInfo curParams = new FlushFileBuffersInfo() { Path = m_handlePathDict[(IntPtr)handle], Log = false };
+            foreach (SMBFilter filter in m_filters)
+            {
+                if (filter.Operation == NTFileOperation.FlushFileBuffers || filter.Operation == NTFileOperation.Any)
+                {
+                    filter.Apply(curParams);
+                }
+            }
+
             IO_STATUS_BLOCK ioStatusBlock;
-            return NtFlushBuffersFile((IntPtr)handle, out ioStatusBlock);
+            NTStatus status = NtFlushBuffersFile((IntPtr)handle, out ioStatusBlock);
+
+            if (curParams.Log)
+            {
+                SMBLogEntry entry = new SMBLogEntry()
+                {
+                    Time = DateTime.Now,
+                    Handle = (IntPtr)handle,
+                    Operation = NTFileOperation.FlushFileBuffers,
+                    Path = m_handlePathDict[(IntPtr)handle],
+                    Result = status,
+                    Detail = ""
+                };
+                SMBLog.AddEntry(entry);
+            }
+            return status;
         }
 
         public NTStatus LockFile(object handle, long byteOffset, long length, bool exclusiveLock)
