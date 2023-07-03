@@ -59,12 +59,13 @@ namespace SMBMon
 
         private void addFilterButton_Click(object sender, EventArgs e)
         {
-            FilterEditor filterEditor = new FilterEditor();
-            filterEditor.Show();
             SMBFilterClause clause = new SMBFilterClause(FilterField.Path, FilterOperand.True, "idk.txt");
-            SMBFilter filter = new SMBFilter(NTFileOperation.Any, FilterAction.Log);
+            SMBFilter filter = new SMBFilter(NTFileOperation.Any, FilterAction.Log, true);
             filter.AddClause(clause);
             Program.FilteredFileSystem.AddFilter(filter);
+
+            FilterEditor filterEditor = new FilterEditor();
+            filterEditor.Show();
         }
     }
 }

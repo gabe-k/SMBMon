@@ -44,10 +44,10 @@ namespace SMBMon
 
     public class SMBFilterClause
     {
-        FilterField field;
-        FilterOperand operand;
-        string valueString;
-        ulong valueInt;
+        public FilterField field;
+        public FilterOperand operand;
+        public string valueString;
+        public ulong valueInt;
 
         private bool EvaluateString(string val)
         {
@@ -341,48 +341,46 @@ namespace SMBMon
 
     public class SMBFilter
     {
-        public List<SMBFilterClause> Clauses;
+        public SMBFilterClause Clause;
         public NTFileOperation Operation;
         public FilterAction Action;
+        public bool Enabled;
 
         public bool Match(ICallInfo callInfo)
         {
             bool result = false;
 
-            foreach (SMBFilterClause clause in Clauses)
+            switch (callInfo.Operation())
             {
-                switch (callInfo.Operation())
-                {
-                    case NTFileOperation.CreateFile:
-                        result |= clause.Evaluate((NTFilteredFileSystem.CreateFileInfo)callInfo);
-                        break;
-                    case NTFileOperation.CloseFile:
-                        result |= clause.Evaluate((NTFilteredFileSystem.CloseFileInfo)callInfo);
-                        break;
-                    case NTFileOperation.ReadFile:
-                        result |= clause.Evaluate((NTFilteredFileSystem.ReadFileInfo)callInfo);
-                        break;
-                    case NTFileOperation.WriteFile:
-                        result |= clause.Evaluate((NTFilteredFileSystem.WriteFileInfo)callInfo);
-                        break;
-                    case NTFileOperation.FlushFileBuffers:
-                        result |= clause.Evaluate((NTFilteredFileSystem.FlushFileBuffersInfo)callInfo);
-                        break;
-                    case NTFileOperation.LockFile:
-                        result |= clause.Evaluate((NTFilteredFileSystem.LockFileInfo)callInfo);
-                        break;
-                    case NTFileOperation.UnlockFile:
-                        result |= clause.Evaluate((NTFilteredFileSystem.UnlockFileInfo)callInfo);
-                        break;
-                    case NTFileOperation.GetFileInformation:
-                        result |= clause.Evaluate((NTFilteredFileSystem.GetFileInformationInfo)callInfo);
-                        break;
-                    case NTFileOperation.SetFileInformation:
-                        result |= clause.Evaluate((NTFilteredFileSystem.SetFileInformationInfo)callInfo);
-                        break;
-                    default:
-                        break;
-                }
+                case NTFileOperation.CreateFile:
+                    result |= Clause.Evaluate((NTFilteredFileSystem.CreateFileInfo)callInfo);
+                    break;
+                case NTFileOperation.CloseFile:
+                    result |= Clause.Evaluate((NTFilteredFileSystem.CloseFileInfo)callInfo);
+                    break;
+                case NTFileOperation.ReadFile:
+                    result |= Clause.Evaluate((NTFilteredFileSystem.ReadFileInfo)callInfo);
+                    break;
+                case NTFileOperation.WriteFile:
+                    result |= Clause.Evaluate((NTFilteredFileSystem.WriteFileInfo)callInfo);
+                    break;
+                case NTFileOperation.FlushFileBuffers:
+                    result |= Clause.Evaluate((NTFilteredFileSystem.FlushFileBuffersInfo)callInfo);
+                    break;
+                case NTFileOperation.LockFile:
+                    result |= Clause.Evaluate((NTFilteredFileSystem.LockFileInfo)callInfo);
+                    break;
+                case NTFileOperation.UnlockFile:
+                    result |= Clause.Evaluate((NTFilteredFileSystem.UnlockFileInfo)callInfo);
+                    break;
+                case NTFileOperation.GetFileInformation:
+                    result |= Clause.Evaluate((NTFilteredFileSystem.GetFileInformationInfo)callInfo);
+                    break;
+                case NTFileOperation.SetFileInformation:
+                    result |= Clause.Evaluate((NTFilteredFileSystem.SetFileInformationInfo)callInfo);
+                    break;
+                default:
+                    break;
             }
 
             return result;
@@ -408,15 +406,14 @@ namespace SMBMon
 
         public void AddClause(SMBFilterClause clause)
         {
-            Clauses.Add(clause);
+            Clause = clause;
         }
 
-        public SMBFilter(NTFileOperation Operation, FilterAction Action)
+        public SMBFilter(NTFileOperation Operation, FilterAction Action, bool Enabled)
         {
             this.Operation = Operation;
             this.Action = Action;
-
-            Clauses = new List<SMBFilterClause>();
+            this.Enabled = Enabled;
         }
 
     }

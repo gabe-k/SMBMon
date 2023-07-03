@@ -19,6 +19,14 @@ namespace SMBMon
 
         private void FilterEditor_Load(object sender, EventArgs e)
         {
+            // populate the filter list
+            foreach(SMBFilter filter in Program.FilteredFileSystem.GetFilters())
+            {
+                string[] columns = { filter.Operation.ToString(), filter.Clause.field.ToString(), filter.Clause.operand.ToString(), filter.Clause.valueString };
+                filtersListView.Items.Add(new ListViewItem(columns));
+                filtersListView.Items[filtersListView.Items.Count - 1].Checked = filter.Enabled;
+            }
+
             // populate the operations box
             Dictionary<int, string> operationsMap = new Dictionary<int, string>();
             foreach (NTFileOperation operation in Enum.GetValues(typeof(NTFileOperation)))
@@ -48,6 +56,12 @@ namespace SMBMon
             operandBox.ValueMember = "Key";
             operandBox.DisplayMember = "Value";
             operandBox.DataSource = operandsMap.ToList();
+        }
+
+        private void Add_Click(object sender, EventArgs e)
+        {
+            SMBFilterClause clause = new SMBFilterClause((FilterField)fieldBox.SelectedValue, (FilterOperand)operandBox.SelectedValue, valueTextBox.Text);
+            SMBFilter filter = new SMBFilter((NTFileOperation)operationBox.SelectedValue, FilterAction.Log, true);
         }
     }
 }

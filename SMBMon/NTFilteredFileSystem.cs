@@ -108,6 +108,11 @@ namespace SMBMon
             m_filters.Add(filter);
         }
 
+        public List<SMBFilter> GetFilters()
+        {
+            return m_filters;
+        }
+
         private OBJECT_ATTRIBUTES InitializeObjectAttributes(UNICODE_STRING objectName)
         {
             OBJECT_ATTRIBUTES objectAttributes = new OBJECT_ATTRIBUTES();
