@@ -227,6 +227,96 @@ namespace SMBMon
             return result;
         }
 
+        public bool Evaluate(NTFilteredFileSystem.LockFileInfo lockFileParams)
+        {
+            bool result = false;
+
+            if (operand == FilterOperand.True)
+            {
+                return true;
+            }
+
+            switch (field)
+            {
+                case FilterField.Path:
+                    result = EvaluateString(lockFileParams.Path);
+                    break;
+                default:
+                    break;
+            }
+
+            return result;
+        }
+
+        public bool Evaluate(NTFilteredFileSystem.UnlockFileInfo unlockFileParams)
+        {
+            bool result = false;
+
+            if (operand == FilterOperand.True)
+            {
+                return true;
+            }
+
+            switch (field)
+            {
+                case FilterField.Path:
+                    result = EvaluateString(unlockFileParams.Path);
+                    break;
+                default:
+                    break;
+            }
+
+            return result;
+        }
+
+        public bool Evaluate(NTFilteredFileSystem.GetFileInformationInfo getFileInfoParams)
+        {
+            bool result = false;
+
+            if (operand == FilterOperand.True)
+            {
+                return true;
+            }
+
+            switch (field)
+            {
+                case FilterField.Path:
+                    result = EvaluateString(getFileInfoParams.Path);
+                    break;
+                case FilterField.InformationClass:
+                    result = EvaluateInt((ulong)getFileInfoParams.InformationClass);
+                    break;
+                default:
+                    break;
+            }
+
+            return result;
+        }
+
+        public bool Evaluate(NTFilteredFileSystem.SetFileInformationInfo setFileInfoParams)
+        {
+            bool result = false;
+
+            if (operand == FilterOperand.True)
+            {
+                return true;
+            }
+
+            switch (field)
+            {
+                case FilterField.Path:
+                    result = EvaluateString(setFileInfoParams.Path);
+                    break;
+                case FilterField.InformationClass:
+                    result = EvaluateInt((ulong)setFileInfoParams.InformationClass);
+                    break;
+                default:
+                    break;
+            }
+
+            return result;
+        }
+
         public SMBFilterClause(FilterField field, FilterOperand operand, string value)
         {
             this.field = field;
@@ -270,6 +360,18 @@ namespace SMBMon
                         break;
                     case NTFileOperation.FlushFileBuffers:
                         result |= clause.Evaluate((NTFilteredFileSystem.FlushFileBuffersInfo)callInfo);
+                        break;
+                    case NTFileOperation.LockFile:
+                        result |= clause.Evaluate((NTFilteredFileSystem.LockFileInfo)callInfo);
+                        break;
+                    case NTFileOperation.UnlockFile:
+                        result |= clause.Evaluate((NTFilteredFileSystem.UnlockFileInfo)callInfo);
+                        break;
+                    case NTFileOperation.GetFileInformation:
+                        result |= clause.Evaluate((NTFilteredFileSystem.GetFileInformationInfo)callInfo);
+                        break;
+                    case NTFileOperation.SetFileInformation:
+                        result |= clause.Evaluate((NTFilteredFileSystem.SetFileInformationInfo)callInfo);
                         break;
                     default:
                         break;

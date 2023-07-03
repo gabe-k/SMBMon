@@ -62,10 +62,11 @@ namespace SMBMon
             this.pathColumnHeader,
             this.resultColumnHeader,
             this.detailColumnHeader});
+            this.eventsListView.FullRowSelect = true;
             this.eventsListView.HideSelection = false;
             this.eventsListView.Location = new System.Drawing.Point(12, 41);
             this.eventsListView.Name = "eventsListView";
-            this.eventsListView.Size = new System.Drawing.Size(776, 397);
+            this.eventsListView.Size = new System.Drawing.Size(776, 383);
             this.eventsListView.TabIndex = 1;
             this.eventsListView.UseCompatibleStateImageBehavior = false;
             this.eventsListView.View = System.Windows.Forms.View.Details;
@@ -111,7 +112,7 @@ namespace SMBMon
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(800, 436);
             this.Controls.Add(this.addFilterButton);
             this.Controls.Add(this.eventsListView);
             this.Controls.Add(this.startServerButton);

@@ -402,16 +402,86 @@ namespace SMBMon
             return status;
         }
 
+        public class LockFileInfo : ICallInfo
+        {
+            public string Path;
+            public bool Log { get; set; }
+
+            NTFileOperation ICallInfo.Operation()
+            {
+                return NTFileOperation.LockFile;
+            }
+        }
         public NTStatus LockFile(object handle, long byteOffset, long length, bool exclusiveLock)
         {
+            LockFileInfo curParams = new LockFileInfo() { Path = m_handlePathDict[(IntPtr)handle], Log = false };
+            foreach (SMBFilter filter in m_filters)
+            {
+                if (filter.Operation == NTFileOperation.LockFile || filter.Operation == NTFileOperation.Any)
+                {
+                    filter.Apply(curParams);
+                }
+            }
+
             IO_STATUS_BLOCK ioStatusBlock;
-            return NtLockFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out ioStatusBlock, ref byteOffset, ref length, 0, true, exclusiveLock);
+            NTStatus status = NtLockFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out ioStatusBlock, ref byteOffset, ref length, 0, true, exclusiveLock);
+
+            if (curParams.Log)
+            {
+                SMBLogEntry entry = new SMBLogEntry()
+                {
+                    Time = DateTime.Now,
+                    Handle = (IntPtr)handle,
+                    Operation = NTFileOperation.LockFile,
+                    Path = m_handlePathDict[(IntPtr)handle],
+                    Result = status,
+                    Detail = ""
+                };
+                SMBLog.AddEntry(entry);
+            }
+
+            return status;
         }
 
+        public class UnlockFileInfo : ICallInfo
+        {
+            public string Path;
+            public bool Log { get; set; }
+
+            NTFileOperation ICallInfo.Operation()
+            {
+                return NTFileOperation.UnlockFile;
+            }
+        }
         public NTStatus UnlockFile(object handle, long byteOffset, long length)
         {
+            UnlockFileInfo curParams = new UnlockFileInfo() { Path = m_handlePathDict[(IntPtr)handle], Log = false };
+            foreach (SMBFilter filter in m_filters)
+            {
+                if (filter.Operation == NTFileOperation.UnlockFile || filter.Operation == NTFileOperation.Any)
+                {
+                    filter.Apply(curParams);
+                }
+            }
+
             IO_STATUS_BLOCK ioStatusBlock;
-            return NtUnlockFile((IntPtr)handle, out ioStatusBlock, ref byteOffset, ref length, 0);
+            NTStatus status = NtUnlockFile((IntPtr)handle, out ioStatusBlock, ref byteOffset, ref length, 0);
+
+            if (curParams.Log)
+            {
+                SMBLogEntry entry = new SMBLogEntry()
+                {
+                    Time = DateTime.Now,
+                    Handle = (IntPtr)handle,
+                    Operation = NTFileOperation.UnlockFile,
+                    Path = m_handlePathDict[(IntPtr)handle],
+                    Result = status,
+                    Detail = ""
+                };
+                SMBLog.AddEntry(entry);
+            }
+
+            return status;
         }
 
         public NTStatus QueryDirectory(out List<QueryDirectoryFileInformation> result, object handle, string fileName, FileInformationClass informationClass)
@@ -441,8 +511,28 @@ namespace SMBMon
             return NTStatus.STATUS_SUCCESS;
         }
 
+        public class GetFileInformationInfo : ICallInfo
+        {
+            public string Path;
+            public FileInformationClass InformationClass;
+            public bool Log { get; set; }
+
+            NTFileOperation ICallInfo.Operation()
+            {
+                return NTFileOperation.GetFileInformation;
+            }
+        }
         public NTStatus GetFileInformation(out FileInformation result, object handle, FileInformationClass informationClass)
         {
+            GetFileInformationInfo curParams = new GetFileInformationInfo() { Path = m_handlePathDict[(IntPtr)handle], InformationClass = informationClass, Log = false };
+            foreach (SMBFilter filter in m_filters)
+            {
+                if (filter.Operation == NTFileOperation.GetFileInformation || filter.Operation == NTFileOperation.Any)
+                {
+                    filter.Apply(curParams);
+                }
+            }
+
             IO_STATUS_BLOCK ioStatusBlock;
             byte[] buffer = new byte[FileInformationBufferSize];
             NTStatus status = NtQueryInformationFile((IntPtr)handle, out ioStatusBlock, buffer, (uint)buffer.Length, (uint)informationClass);
@@ -456,9 +546,35 @@ namespace SMBMon
             {
                 result = null;
             }
+
+            if (curParams.Log)
+            {
+                SMBLogEntry entry = new SMBLogEntry()
+                {
+                    Time = DateTime.Now,
+                    Handle = (IntPtr)handle,
+                    Operation = NTFileOperation.GetFileInformation,
+                    Path = m_handlePathDict[(IntPtr)handle],
+                    Result = status,
+                    Detail = string.Format("Information Class: {0:X}", informationClass)
+                };
+                SMBLog.AddEntry(entry);
+            }
+
             return status;
         }
 
+        public class SetFileInformationInfo : ICallInfo
+        {
+            public string Path;
+            public FileInformationClass InformationClass;
+            public bool Log { get; set; }
+
+            NTFileOperation ICallInfo.Operation()
+            {
+                return NTFileOperation.SetFileInformation;
+            }
+        }
         public NTStatus SetFileInformation(object handle, FileInformation information)
         {
             IO_STATUS_BLOCK ioStatusBlock;
@@ -501,8 +617,32 @@ namespace SMBMon
                     information = fileLinkInformationRemote;
                 }
             }
+            SetFileInformationInfo curParams = new SetFileInformationInfo() { Path = m_handlePathDict[(IntPtr)handle], InformationClass = information.FileInformationClass, Log = false };
+            foreach (SMBFilter filter in m_filters)
+            {
+                if (filter.Operation == NTFileOperation.SetFileInformation || filter.Operation == NTFileOperation.Any)
+                {
+                    filter.Apply(curParams);
+                }
+            }
             byte[] buffer = information.GetBytes();
-            return NtSetInformationFile((IntPtr)handle, out ioStatusBlock, buffer, (uint)buffer.Length, (uint)information.FileInformationClass);
+            NTStatus status = NtSetInformationFile((IntPtr)handle, out ioStatusBlock, buffer, (uint)buffer.Length, (uint)information.FileInformationClass);
+
+            if (curParams.Log)
+            {
+                SMBLogEntry entry = new SMBLogEntry()
+                {
+                    Time = DateTime.Now,
+                    Handle = (IntPtr)handle,
+                    Operation = NTFileOperation.SetFileInformation,
+                    Path = m_handlePathDict[(IntPtr)handle],
+                    Result = status,
+                    Detail = string.Format("Information Class: {0:X}", information.FileInformationClass)
+                };
+                SMBLog.AddEntry(entry);
+            }
+
+            return status;
         }
 
         public NTStatus GetFileSystemInformation(out FileSystemInformation result, FileSystemInformationClass informationClass)
