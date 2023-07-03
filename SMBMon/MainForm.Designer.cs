@@ -87,7 +87,7 @@ namespace SMBMon
             // pathColumnHeader
             // 
             this.pathColumnHeader.Text = "Path";
-            this.pathColumnHeader.Width = 301;
+            this.pathColumnHeader.Width = 220;
             // 
             // resultColumnHeader
             // 
@@ -97,6 +97,7 @@ namespace SMBMon
             // detailColumnHeader
             // 
             this.detailColumnHeader.Text = "Detail";
+            this.detailColumnHeader.Width = 195;
             // 
             // addFilterButton
             // 

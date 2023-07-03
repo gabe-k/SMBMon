@@ -556,7 +556,7 @@ namespace SMBMon
                     Operation = NTFileOperation.GetFileInformation,
                     Path = m_handlePathDict[(IntPtr)handle],
                     Result = status,
-                    Detail = string.Format("Information Class: {0:X}", informationClass)
+                    Detail = string.Format("Information Class: 0x{0:X}", informationClass)
                 };
                 SMBLog.AddEntry(entry);
             }
@@ -637,7 +637,7 @@ namespace SMBMon
                     Operation = NTFileOperation.SetFileInformation,
                     Path = m_handlePathDict[(IntPtr)handle],
                     Result = status,
-                    Detail = string.Format("Information Class: {0:X}", information.FileInformationClass)
+                    Detail = string.Format("Information Class: 0x{0:X}", information.FileInformationClass)
                 };
                 SMBLog.AddEntry(entry);
             }
