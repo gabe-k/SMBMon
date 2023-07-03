@@ -131,6 +131,54 @@ namespace SMBMon
             return result;
         }
 
+        public bool Evaluate(ref NTFilteredFileSystem.CloseFileParams closeFileParams)
+        {
+            bool result = false;
+
+            if (operand == FilterOperand.True)
+            {
+                return true;
+            }
+
+            switch (field)
+            {
+                case FilterField.Path:
+                    result = EvaluateString(closeFileParams.Path);
+                    break;
+                default:
+                    break;
+            }
+
+            return result;
+        }
+
+        public bool Evaluate(ref NTFilteredFileSystem.ReadFileParams readFileParams)
+        {
+            bool result = false;
+
+            if (operand == FilterOperand.True)
+            {
+                return true;
+            }
+
+            switch (field)
+            {
+                case FilterField.Path:
+                    result = EvaluateString(readFileParams.Path);
+                    break;
+                case FilterField.Offset:
+                    result = EvaluateInt((ulong)readFileParams.Offset);
+                    break;
+                case FilterField.Length:
+                    result = EvaluateInt((ulong)readFileParams.Length);
+                    break;
+                default:
+                    break;
+            }
+
+            return result;
+        }
+
         public SMBFilterClause(FilterField field, FilterOperand operand, string value)
         {
             this.field = field;
@@ -164,6 +212,30 @@ namespace SMBMon
             return result;
         }
 
+        public bool Match(ref NTFilteredFileSystem.CloseFileParams closeFileParams)
+        {
+            bool result = false;
+
+            foreach (SMBFilterClause clause in Clauses)
+            {
+                result |= clause.Evaluate(ref closeFileParams);
+            }
+
+            return result;
+        }
+
+        public bool Match(ref NTFilteredFileSystem.ReadFileParams readFileParams)
+        {
+            bool result = false;
+
+            foreach (SMBFilterClause clause in Clauses)
+            {
+                result |= clause.Evaluate(ref readFileParams);
+            }
+
+            return result;
+        }
+
         public void Apply(ref NTFilteredFileSystem.CreateFileParams createFileParams)
         {
             if (!Match(ref createFileParams))
@@ -175,6 +247,40 @@ namespace SMBMon
             {
                 case FilterAction.Log:
                     createFileParams.Log = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        public void Apply(ref NTFilteredFileSystem.CloseFileParams closeFileParams)
+        {
+            if (!Match(ref closeFileParams))
+            {
+                return;
+            }
+
+            switch (Action)
+            {
+                case FilterAction.Log:
+                    closeFileParams.Log = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        public void Apply(ref NTFilteredFileSystem.ReadFileParams readFileParams)
+        {
+            if (!Match(ref readFileParams))
+            {
+                return;
+            }
+
+            switch (Action)
+            {
+                case FilterAction.Log:
+                    readFileParams.Log = true;
                     break;
                 default:
                     break;

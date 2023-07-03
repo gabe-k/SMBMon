@@ -132,7 +132,7 @@ namespace SMBMon
             // apply filters
             foreach (SMBFilter filter in m_filters)
             {
-                if (filter.Operation == NTFileOperation.CreateFile)
+                if (filter.Operation == NTFileOperation.CreateFile || filter.Operation == NTFileOperation.Any)
                 {
                     filter.Apply(ref curParams);
                 }
@@ -195,6 +195,11 @@ namespace SMBMon
             return status;
         }
 
+        public struct CloseFileParams
+        {
+            public string Path;
+            public bool Log;
+        }
         public NTStatus CloseFile(object handle)
         {
             // [MS-FSA] 2.1.5.4 The close operation has to complete any pending ChangeNotify request with STATUS_NOTIFY_CLEANUP.
@@ -208,23 +213,52 @@ namespace SMBMon
                 Cancel(request);
             }
 
-            NTStatus status = NtClose((IntPtr)handle);
-            SMBLogEntry entry = new SMBLogEntry()
+            CloseFileParams curParams = new CloseFileParams() { Path = m_handlePathDict[(IntPtr)handle], Log = false };
+            foreach (SMBFilter filter in m_filters)
             {
-                Time = DateTime.Now,
-                Handle = (IntPtr)handle,
-                Operation = NTFileOperation.CloseFile,
-                Path = m_handlePathDict[(IntPtr)handle],
-                Result = status,
-                Detail = "",
-            };
-            SMBLog.AddEntry(entry);
+                if (filter.Operation == NTFileOperation.CloseFile || filter.Operation == NTFileOperation.Any)
+                {
+                    filter.Apply(ref curParams);
+                }
+            }
+            NTStatus status = NtClose((IntPtr)handle);
+
+            if (curParams.Log)
+            {
+                SMBLogEntry entry = new SMBLogEntry()
+                {
+                    Time = DateTime.Now,
+                    Handle = (IntPtr)handle,
+                    Operation = NTFileOperation.CloseFile,
+                    Path = m_handlePathDict[(IntPtr)handle],
+                    Result = status,
+                    Detail = "",
+                };
+                SMBLog.AddEntry(entry);
+            }
             return status;
         }
 
+        public struct ReadFileParams
+        {
+            public string Path;
+            public long Offset;
+            public int Length;
+            public bool Log;
+        }
         public NTStatus ReadFile(out byte[] data, object handle, long offset, int maxCount)
         {
             IO_STATUS_BLOCK ioStatusBlock;
+
+            ReadFileParams curParams = new ReadFileParams() { Path = m_handlePathDict[(IntPtr)handle], Offset = offset, Length = maxCount, Log = false };
+            foreach (SMBFilter filter in m_filters)
+            {
+                if (filter.Operation == NTFileOperation.ReadFile || filter.Operation == NTFileOperation.Any)
+                {
+                    filter.Apply(ref curParams);
+                }
+            }
+
             data = new byte[maxCount];
             NTStatus status = NtReadFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out ioStatusBlock, data, (uint)maxCount, ref offset, IntPtr.Zero);
             if (status == NTStatus.STATUS_SUCCESS)
@@ -236,16 +270,19 @@ namespace SMBMon
                 }
             }
 
-            SMBLogEntry entry = new SMBLogEntry()
+            if (curParams.Log)
             {
-                Time = DateTime.Now,
-                Handle = (IntPtr)handle,
-                Operation = NTFileOperation.ReadFile,
-                Path = m_handlePathDict[(IntPtr)handle],
-                Result = status,
-                Detail = string.Format("Offset: {0:X} Length: {1:X}", offset, maxCount)
-            };
-            SMBLog.AddEntry(entry);
+                SMBLogEntry entry = new SMBLogEntry()
+                {
+                    Time = DateTime.Now,
+                    Handle = (IntPtr)handle,
+                    Operation = NTFileOperation.ReadFile,
+                    Path = m_handlePathDict[(IntPtr)handle],
+                    Result = status,
+                    Detail = string.Format("Offset: {0:X} Length: {1:X}", offset, maxCount)
+                };
+                SMBLog.AddEntry(entry);
+            }
             return status;
         }
 
