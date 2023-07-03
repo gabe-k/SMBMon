@@ -179,6 +179,33 @@ namespace SMBMon
             return result;
         }
 
+        public bool Evaluate(ref NTFilteredFileSystem.WriteFileParams writeFileParams)
+        {
+            bool result = false;
+
+            if (operand == FilterOperand.True)
+            {
+                return true;
+            }
+
+            switch (field)
+            {
+                case FilterField.Path:
+                    result = EvaluateString(writeFileParams.Path);
+                    break;
+                case FilterField.Offset:
+                    result = EvaluateInt((ulong)writeFileParams.Offset);
+                    break;
+                case FilterField.Length:
+                    result = EvaluateInt((ulong)writeFileParams.Length);
+                    break;
+                default:
+                    break;
+            }
+
+            return result;
+        }
+
         public SMBFilterClause(FilterField field, FilterOperand operand, string value)
         {
             this.field = field;
@@ -236,6 +263,18 @@ namespace SMBMon
             return result;
         }
 
+        public bool Match(ref NTFilteredFileSystem.WriteFileParams writeFileParams)
+        {
+            bool result = false;
+
+            foreach (SMBFilterClause clause in Clauses)
+            {
+                result |= clause.Evaluate(ref writeFileParams);
+            }
+
+            return result;
+        }
+
         public void Apply(ref NTFilteredFileSystem.CreateFileParams createFileParams)
         {
             if (!Match(ref createFileParams))
@@ -281,6 +320,23 @@ namespace SMBMon
             {
                 case FilterAction.Log:
                     readFileParams.Log = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        public void Apply(ref NTFilteredFileSystem.WriteFileParams writeFileParams)
+        {
+            if (!Match(ref writeFileParams))
+            {
+                return;
+            }
+
+            switch (Action)
+            {
+                case FilterAction.Log:
+                    writeFileParams.Log = true;
                     break;
                 default:
                     break;

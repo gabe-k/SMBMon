@@ -286,8 +286,25 @@ namespace SMBMon
             return status;
         }
 
+        public struct WriteFileParams
+        {
+            public string Path;
+            public long Offset;
+            public int Length;
+            public bool Log;
+        }
         public NTStatus WriteFile(out int numberOfBytesWritten, object handle, long offset, byte[] data)
         {
+            WriteFileParams curParams = new WriteFileParams() { Path = m_handlePathDict[(IntPtr)handle], Offset = offset, Length = data.Length, Log = false };
+            foreach (SMBFilter filter in m_filters)
+            {
+                if (filter.Operation == NTFileOperation.WriteFile || filter.Operation == NTFileOperation.Any)
+                {
+                    filter.Apply(ref curParams);
+                }
+            }
+
+
             IO_STATUS_BLOCK ioStatusBlock;
             NTStatus status = NtWriteFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out ioStatusBlock, data, (uint)data.Length, ref offset, IntPtr.Zero);
             if (status == NTStatus.STATUS_SUCCESS)
@@ -298,6 +315,21 @@ namespace SMBMon
             {
                 numberOfBytesWritten = 0;
             }
+
+            if (curParams.Log)
+            {
+                SMBLogEntry entry = new SMBLogEntry()
+                {
+                    Time = DateTime.Now,
+                    Handle = (IntPtr)handle,
+                    Operation = NTFileOperation.WriteFile,
+                    Path = m_handlePathDict[(IntPtr)handle],
+                    Result = status,
+                    Detail = string.Format("Offset: {0:X} Length: {1:X}", offset, numberOfBytesWritten)
+                };
+                SMBLog.AddEntry(entry);
+            }
+
             return status;
         }
 
